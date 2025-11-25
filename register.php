@@ -1,99 +1,61 @@
 <?php
+// Démarre ou reprend la session.
 session_start();
+
+// Inclut le fichier 'fonctions.php'.
 require "fonctions.php";
 
+// Établit la connexion à la base de données via la fonction getDB() et stocke l'objet PDO.
 $pdo = getDB();
 
+// Vérifie si la requête HTTP est de type POST, formulaire d'inscription soumis.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Nettoyage et récupération des données du formulaire. trim() supprime les espaces inutiles autour des valeurs (Sécurité obligatoire).
     $nom = trim($_POST['nom']);
     $email = trim($_POST['email']);
     $adresse = trim($_POST['adresse']);
     $password = trim($_POST['password']);
     $passwordConfirm = trim($_POST['password_confirm']);
 
+    // --- Vérifications de Sécurité et Validation ---
+
+    // 1. Vérification des Champs Obligatoires.
     if ($nom === "" || $email === "" || $adresse === "" || $password === "" || $passwordConfirm === "") {
+        // Arrête l'exécution et affiche un message d'erreur si un champ est vide.
         die("Tous les champs sont obligatoires.");
     }
 
+    // 2. Validation de l'Email. Utilise la fonction native de PHP pour vérifier le format de l'email (Regex email).
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // Arrête l'exécution si le format de l'email est invalide.
         die("Email invalide.");
     }
 
+    // 3. Vérification des 2 mdp.
     if ($password !== $passwordConfirm) {
+        // Arrête l'exécution si les deux mdp ne correspondent pas.
         die("Les mots de passe ne correspondent pas.");
     }
 
+    // 4. Vérification si l'Email existe déjà. Appelle la fonction emailExiste() pour vérifier l'unicité dans la BDD.
     if (emailExiste($pdo, $email)) {
+        // Arrête l'exécution si l'email est déjà utilisé.
         die("Cet email existe déjà.");
     }
 
+    // 5. Hashage du mdp.
+    // Crée un hash sécurisé du mdp.
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
+    // --- Insertion dans la base de données ---
+
+    // Appelle la fonction creerUtilisateur() pour insérer les données (y compris l'adresse et le hash) dans la table 'users' (avec le rôle par défaut 'user').
     if (creerUtilisateur($pdo, $nom, $email, $passwordHash, $adresse)) {
+        // Succès : Affiche un message de succès et un lien vers la page de connexion.
         echo "Inscription réussie. <a href='login.php'>Se connecter</a>";
     } else {
+        // Échec : Affiche un message d'erreur si la requête d'insertion a échoué.
         echo "Erreur lors de l'inscription.";
     }
 }
 ?>
-
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscription - Yoann</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="nebula-dot" style="left: 10%; top: 15%;"></div>
-    <div class="nebula-dot secondary" style="right: 8%; bottom: 22%;"></div>
-
-    <header class="topbar">
-        <div class="brand">
-            <span class="orb"></span>
-            <span>Yoann</span>
-        </div>
-        <nav class="nav-links">
-            <a href="index.html">Accueil</a>
-            <a href="register.php">Inscription</a>
-            <a href="login.php">Connexion</a>
-        </nav>
-    </header>
-
-    <main class="page">
-        <div class="grid-two">
-
-            <section class="card">
-                <h3>Créer un compte</h3>
-                <form method="POST">
-                    <div class="field">
-                        <label for="nom">Nom</label>
-                        <input id="nom" type="text" name="nom" required>
-                    </div>
-                    <div class="field">
-                        <label for="email">Email</label>
-                        <input id="email" type="email" name="email" required>
-                    </div>
-                    <div class="field">
-                        <label for="adresse">Adresse physique</label>
-                        <input id="adresse" type="text" name="adresse" placeholder="N° et rue, ville" required>
-                    </div>
-                    <div class="field">
-                        <label for="password">Mot de passe</label>
-                        <input id="password" type="password" name="password" required>
-                    </div>
-                    <div class="field">
-                        <label for="password_confirm">Confirmer le mot de passe</label>
-                        <input id="password_confirm" type="password" name="password_confirm" required>
-                    </div>
-                    <div class="actions">
-                        <button class="btn" type="submit">S'inscrire</button>
-                        <a class="inline-link" href="login.php">Déjà membre ?</a>
-                    </div>
-                </form>
-            </section>
-        </div>
-    </main>
-</body>
-</html>

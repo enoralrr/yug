@@ -1,64 +1,49 @@
 <?php
+// Démarre ou reprend la session.
 session_start();
+
+// Inclut le fichier 'fonctions.php'.
 require "fonctions.php";
-requireLogin();
-?>
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de bord - Yoann</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="nebula-dot" style="left: 12%; top: 18%;"></div>
-    <div class="nebula-dot secondary" style="right: 12%; bottom: 18%;"></div>
+// Établit la connexion à la base de données via la fonction getDB() et stocke l'objet de connexion PDO.
+$pdo = getDB();
 
-    <header class="topbar">
-        <div class="brand">
-            <span class="orb"></span>
-            <span>Yoann</span>
-        </div>
-        <nav class="nav-links">
-            <a href="index.html">Accueil</a>
-            <a href="logout.php">Déconnexion</a>
-        </nav>
-    </header>
+// Vérifie si la méthode de requête HTTP utilisée est 'POST'. 
+// Cela signifie que le formulaire HTML a été soumis par l'utilisateur.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    
+    // Nettoyage et récupération des données soumises. 
+    // La fonction trim() est utilisée pour supprimer les espaces inutiles au début et à la fin (Sécurité obligatoire).
+    $nom = trim($_POST['nom']);
+    $email = trim($_POST['email']);
+    $adresse = trim($_POST['adresse']);
+    $password = trim($_POST['password']);
+    $passwordConfirm = trim($_POST['password_confirm']);
 
-    <main class="page">
-        <div class="grid-two">
-            <section class="hero">
-                <div class="eyebrow">Bienvenue</div>
-                <h2>Salut <?php echo htmlspecialchars($_SESSION['user_nom']); ?> ?</h2>
-                <p>Moi c'est Yoann</p>
-                <div class="actions">
-                    <a class="btn" href="logout.php">Se déconnecter</a>
-                    <a class="btn" href="delete.php">Supprimer le compte</a>
-                    <a class="btn secondary" href="index.html">Retour accueil</a>
-                </div>
-            </section>
+    // --- Vérifications de Sécurité et Validation (Fonctionnalité A) ---
 
-            <section class="card">
-                <h3>Etat de bord</h3>
-                <div class="table">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span>Profil</span><span class="badge">Actif</span>
-                    </div>
-                    <div class="divider"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span>Mode</span><small>Eleve</small>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span>Progression</span><small>Php</small>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>Action rapide</span><small><a class="inline-link" href="logout.php">Déconnexion</a></small>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </main>
-</body>
-</html>
+    // 1. Vérification des Champs Obligatoires.
+    // Vérifie si l'une des variables est vide.
+    if ($nom === "" || $email === "" || $adresse === "" || $password === "" || $passwordConfirm === "") {
+        // Arrête le script (die) et affiche un message si tous les champs ne sont pas remplis.
+        die("Tous les champs sont obligatoires.");
+    }
+
+    // 2. Validation de l'Email.
+    // Utilise la fonction native PHP filter_var avec FILTER_VALIDATE_EMAIL pour vérifier le format de l'email (Regex email).
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // Arrête l'exécution si le format de l'email est jugé invalide.
+        die("Email invalide.");
+    }
+
+    // 3. Vérification des 2 Mots de Passe.
+    // S'assure que les mots de passe entrés et leur confirmation sont strictement identiques.
+    if ($password !== $passwordConfirm) {
+        // Arrête l'exécution si les mots de passe ne correspondent pas.
+        die("Les mots de passe ne correspondent pas.");
+    }
+
+    // 4. Vérification si l'Email existe déjà.
+    // Appelle la fonction emailExiste() pour interroger la BDD et vérifier l'unicité de l'email.
+    if (emailExiste($pdo, $email)) {
+        // Arrête l'exécution si un compte utilise déjà cet email.
